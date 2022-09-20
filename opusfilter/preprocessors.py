@@ -152,3 +152,68 @@ class MonolingualSentenceSplitter(PreprocessorABC):
             outputs = [self.splitter.split(segment) for segment in segments]
             for output_pair in zip_longest(*outputs, fillvalue=''):
                 yield list(output_pair)
+
+
+class MosesNormalizer(PreprocessorABC):
+    """Normalize punctuation with sacremoses
+    """
+    def __init__(self, **kwargs):
+        self.normalizer = sacremoses.MosesPunctNormalizer()
+        super().__init__(**kwargs)
+
+    def process(self, pairs):
+        for segments in pairs:
+            yield [self.normalizer.normalize(segment) for segment in segments]
+
+
+class Codeswitcher(PreprocessorABC):
+    """Codeswitch preprocessor
+    TODO not support n_jobs parameter
+
+    Paper: https://arxiv.org/abs/1904.09107
+    """
+    def __init__(self, max_replace_ratio=0.3, pharaoh_fwd=None, pharaoh_rev=None, **kwargs):
+        self.max_replace_ratio = max_replace_ratio
+        if pharaoh_fwd is None:
+            raise ConfigurationError("eflomal alignment result `pharaoh_fwd` should be provided")
+        if pharaoh_rev is None:
+            raise ConfigurationError("eflomal alignment result `pharaoh_rev` should be provided")
+
+        self.pharaoh_fwd = pharaoh_fwd
+        self.pharaoh_rev = pharaoh_rev
+        super().__init__(**kwargs)
+
+    def _codeswitch(self, src_line, tgt_line, pharaoh, reverse=False):
+        """Apply codeswitch on src_words and tgt_words"""
+        src_words = src_line.split()
+        tgt_words = tgt_line.split()
+        all_pairs = pharaoh.split()
+
+        max_replace_num = max(int(len(all_pairs) * self.max_replace_ratio), 1)
+        replace_num = random.randint(1, max_replace_num)
+        try:
+            pairs = random.sample(all_pairs, replace_num)
+        except ValueError:
+            return src_line, ""
+
+        replaced = []
+        for item in pairs:
+            src_index, tgt_index = item.split('-')
+            if reverse:
+                src_index, tgt_index = tgt_index, src_index
+
+            replaced.append(src_words[int(src_index)] + "-" + tgt_words[int(tgt_index)])
+            src_words[int(src_index)] = tgt_words[int(tgt_index)]
+
+        return " ".join(src_words), " ".join(replaced)
+
+    def process(self, pairs):
+        fwd_file = file_open(self.pharaoh_fwd)
+        rev_file = file_open(self.pharaoh_rev)
+        for segment, fwd, rev in zip(pairs, fwd_file, rev_file):
+            src_line, _ = self._codeswitch(segment[0], segment[1], fwd.strip())
+            tgt_line, _ = self._codeswitch(segment[1], segment[0], rev.strip(), reverse=True)
+            yield [src_line, tgt_line]
+
+        fwd_file.close()
+        rev_file.close()

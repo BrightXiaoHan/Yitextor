@@ -4,12 +4,15 @@ from functools import reduce
 from itertools import zip_longest
 import logging
 import operator
+import random
 import re
 
+import sacremoses
 import sentence_splitter
 
 from . import PreprocessorABC, ConfigurationError
 from .tokenization import get_tokenize
+from .util import file_open
 
 
 logger = logging.getLogger(__name__)

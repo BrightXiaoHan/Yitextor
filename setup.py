@@ -45,15 +45,15 @@ tests_require = [
 all_require = jieba_require + mecab_require + laser_require + tests_require
 
 setuptools.setup(
-    name="opusfilter",
+    name="opusfilter-fork",
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
-    author="Mikko Aulamo, Sami Virpioja",
-    author_email="mikko.aulamo@helsinki.fi",
+    author="Bing Han",
+    author_email="beatmight@gmail.com",
     description="Toolbox for filtering parallel corpora",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Helsinki-NLP/OpusFilter",
+    url="https://github.com/NMT-Hub/filter",
     packages=setuptools.find_packages(),
     scripts=["bin/opusfilter", "bin/opusfilter-cmd", "bin/opusfilter-diagram", "bin/opusfilter-duplicates", "bin/opusfilter-scores", "bin/opusfilter-test"],
     install_requires=install_requires,
